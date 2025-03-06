@@ -9,6 +9,7 @@ import {
   ButtonInteraction,
 } from "discord.js";
 import * as ticketService from "../services/ticketService";
+import * as transcriptService from "../services/transcriptService";
 
 // Define a type that can be either a button or command interaction
 type TicketInteraction = ButtonInteraction | CommandInteraction;
@@ -40,9 +41,6 @@ export async function handleCloseTicket(interaction: TicketInteraction) {
     return;
   }
 
-  // Update ticket status
-  await ticketService.updateTicketStatus(ticket.id, "CLOSED");
-
   // Get ticket configuration
   const config = await ticketService.getOrCreateConfig(
     interaction.guild?.id || ""
@@ -56,6 +54,21 @@ export async function handleCloseTicket(interaction: TicketInteraction) {
     .setTimestamp();
 
   await interaction.reply({ embeds: [closeEmbed] });
+
+  // Save transcript if enabled
+  let transcriptUrl = null;
+  if (config.saveTranscripts && interaction.channel) {
+    const textChannel = interaction.channel as TextChannel;
+    await textChannel.send("Saving transcript...");
+    transcriptUrl = await transcriptService.saveTranscript(
+      textChannel,
+      ticket.id,
+      interaction.user
+    );
+  }
+
+  // Update ticket status
+  await ticketService.updateTicketStatus(ticket.id, "CLOSED");
 
   // Log ticket closure if log channel is configured
   if (config?.logChannelId) {
@@ -77,7 +90,43 @@ export async function handleCloseTicket(interaction: TicketInteraction) {
         )
         .setTimestamp();
 
+      // Add transcript link if available
+      if (transcriptUrl) {
+        logEmbed.addFields({
+          name: "Transcript",
+          value: `[View Transcript](${transcriptUrl})`,
+        });
+      }
+
       await ticketService.logTicketEvent(guild, config.logChannelId, logEmbed);
+    }
+  }
+
+  // Send transcript link to user if available
+  if (transcriptUrl) {
+    try {
+      const creator = await interaction.client.users.fetch(ticket.userId);
+      const dmEmbed = new EmbedBuilder()
+        .setColor(0x5865f2)
+        .setTitle("Ticket Closed")
+        .setDescription(
+          `Your ticket in ${interaction.guild?.name} has been closed.`
+        )
+        .addFields(
+          {
+            name: "Ticket",
+            value:
+              interaction.channel && "name" in interaction.channel
+                ? `#${interaction.channel.name}`
+                : `#unknown-channel`,
+          },
+          { name: "Transcript", value: `[View Transcript](${transcriptUrl})` }
+        )
+        .setTimestamp();
+
+      await creator.send({ embeds: [dmEmbed] });
+    } catch (error) {
+      console.error("Failed to send transcript to user:", error);
     }
   }
 

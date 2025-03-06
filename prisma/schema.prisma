@@ -9,21 +9,22 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Ticket {
-  id         String    @id @default(uuid())
-  channelId  String    @unique
-  userId     String
-  guildId    String
-  status     String    @default("OPEN") // OPEN, CLOSED, LOCKED
-  createdAt  DateTime  @default(now())
-  closedAt   DateTime?
-  lockedAt   DateTime?
-  ticketType String    @default("SUPPORT")
-  messages   Message[]
+  id            String    @id @default(uuid())
+  channelId     String    @unique
+  userId        String
+  guildId       String
+  status        String    @default("OPEN") // OPEN, CLOSED, LOCKED
+  createdAt     DateTime  @default(now())
+  closedAt      DateTime?
+  lockedAt      DateTime?
+  ticketType    String    @default("SUPPORT")
+  transcriptUrl String? // URL to the transcript file
+  messages      Message[]
 }
 
 model Message {
@@ -36,11 +37,13 @@ model Message {
 }
 
 model TicketConfig {
-  id             String  @id @default("config")
-  guildId        String
-  categoryId     String?
-  logChannelId   String?
-  supportRoleId  String?
-  welcomeMessage String  @default("Welcome to your ticket! Support will be with you shortly.")
-  ticketTypes    String  @default("SUPPORT,BILLING,TECHNICAL") // Comma-separated list of ticket types
+  id                  String  @id @default("config")
+  guildId             String
+  categoryId          String?
+  logChannelId        String?
+  supportRoleId       String?
+  welcomeMessage      String  @default("Welcome to your ticket! Support will be with you shortly.")
+  ticketTypes         String  @default("SUPPORT,BILLING,TECHNICAL") // Comma-separated list of ticket types
+  saveTranscripts     Boolean @default(true) // Whether to save transcripts
+  transcriptChannelId String? // Channel to post transcripts to
 }
