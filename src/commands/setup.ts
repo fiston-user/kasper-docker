@@ -4,7 +4,7 @@ import {
   ChannelType,
   PermissionFlagsBits,
 } from "discord.js";
-import { prisma } from "../index";
+import * as ticketService from "../services/ticketService";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -46,30 +46,26 @@ module.exports = {
     const supportRole = interaction.options.getRole("support_role");
     const welcomeMessage = interaction.options.getString("welcome_message");
 
-    // Get or create ticket configuration
-    let config = await prisma.ticketConfig.findUnique({
-      where: { id: "config" },
-    });
-
-    if (!config) {
-      config = await prisma.ticketConfig.create({
-        data: {
-          id: "config",
-          guildId: interaction.guild!.id,
-        },
+    if (!interaction.guild) {
+      await interaction.reply({
+        content: "This command can only be used in a server.",
+        ephemeral: true,
       });
+      return;
     }
 
+    // Get or create ticket configuration
+    let config = await ticketService.getOrCreateConfig(interaction.guild.id);
+
     // Update configuration with new values
-    await prisma.ticketConfig.update({
-      where: { id: "config" },
-      data: {
-        categoryId: category?.id || config.categoryId,
-        logChannelId: logChannel?.id || config.logChannelId,
-        supportRoleId: supportRole?.id || config.supportRoleId,
-        welcomeMessage: welcomeMessage || config.welcomeMessage,
-      },
-    });
+    const updateData: any = {};
+
+    if (category) updateData.categoryId = category.id;
+    if (logChannel) updateData.logChannelId = logChannel.id;
+    if (supportRole) updateData.supportRoleId = supportRole.id;
+    if (welcomeMessage) updateData.welcomeMessage = welcomeMessage;
+
+    await ticketService.updateConfig(updateData);
 
     // Build response message
     let responseMessage = "Ticket system configuration updated:";

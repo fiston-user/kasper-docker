@@ -8,7 +8,7 @@ import {
   PermissionFlagsBits,
   ColorResolvable,
 } from "discord.js";
-import { prisma } from "../index";
+import * as ticketService from "../services/ticketService";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -41,6 +41,14 @@ module.exports = {
     const description = interaction.options.getString("description", true);
     const colorInput = interaction.options.getString("color") || "#0099ff";
 
+    if (!interaction.guild) {
+      await interaction.reply({
+        content: "This command can only be used in a server.",
+        ephemeral: true,
+      });
+      return;
+    }
+
     // Create ticket panel embed
     const panelEmbed = new EmbedBuilder()
       .setColor(colorInput as ColorResolvable)
@@ -49,9 +57,7 @@ module.exports = {
       .setFooter({ text: "Click the button below to create a ticket" });
 
     // Create buttons for different ticket types
-    const config = await prisma.ticketConfig.findUnique({
-      where: { id: "config" },
-    });
+    const config = await ticketService.getOrCreateConfig(interaction.guild.id);
 
     const ticketTypes = config?.ticketTypes.split(",") || [
       "SUPPORT",
@@ -63,13 +69,13 @@ module.exports = {
     const row = new ActionRowBuilder<ButtonBuilder>();
 
     // Add buttons for each ticket type
-    ticketTypes.forEach((type, index) => {
+    ticketTypes.forEach((type) => {
       row.addComponents(
         new ButtonBuilder()
           .setCustomId(`create_ticket_${type}`)
           .setLabel(`${type.charAt(0) + type.slice(1).toLowerCase()} Ticket`)
           .setStyle(ButtonStyle.Primary)
-          .setEmoji(getEmojiForTicketType(type))
+          .setEmoji(ticketService.getEmojiForTicketType(type))
       );
     });
 

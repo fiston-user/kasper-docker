@@ -14,6 +14,8 @@ import {
   PermissionFlagsBits,
 } from "discord.js";
 import { prisma } from "../index";
+import * as ticketButtons from "../buttons/ticketButtons";
+import * as ticketModals from "../modals/ticketModals";
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -22,7 +24,7 @@ module.exports = {
     if (interaction.isButton()) {
       // Handle close ticket button
       if (interaction.customId === "close_ticket") {
-        await handleCloseTicket(interaction);
+        await ticketButtons.handleCloseTicket(interaction);
       }
 
       // Handle lock ticket button
@@ -38,7 +40,7 @@ module.exports = {
           });
           return;
         }
-        await handleLockTicket(interaction);
+        await ticketButtons.handleLockTicket(interaction);
       }
 
       // Handle unlock ticket button
@@ -54,7 +56,7 @@ module.exports = {
           });
           return;
         }
-        await handleUnlockTicket(interaction);
+        await ticketButtons.handleUnlockTicket(interaction);
       }
 
       // Handle create ticket buttons from panel
@@ -94,9 +96,7 @@ module.exports = {
     if (interaction.isModalSubmit()) {
       if (interaction.customId.startsWith("ticket_modal_")) {
         const ticketType = interaction.customId.replace("ticket_modal_", "");
-        const reason = interaction.fields.getTextInputValue("ticket_reason");
-
-        await createTicket(interaction, ticketType, reason);
+        await ticketModals.handleTicketCreate(interaction, ticketType);
       }
     }
   },

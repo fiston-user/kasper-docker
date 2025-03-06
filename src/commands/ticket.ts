@@ -11,6 +11,9 @@ import {
   PermissionFlagsBits,
 } from "discord.js";
 import { prisma } from "../index";
+import * as ticketService from "../services/ticketService";
+import * as ticketButtons from "../buttons/ticketButtons";
+import * as ticketModals from "../modals/ticketModals";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -56,7 +59,7 @@ module.exports = {
     if (subcommand === "create") {
       await handleCreateTicket(interaction);
     } else if (subcommand === "close") {
-      await handleCloseTicket(interaction);
+      await ticketButtons.handleCloseTicket(interaction);
     } else if (subcommand === "lock") {
       // Check if user has administrator permissions
       if (
@@ -69,7 +72,7 @@ module.exports = {
         });
         return;
       }
-      await handleLockTicket(interaction);
+      await ticketButtons.handleLockTicket(interaction);
     } else if (subcommand === "unlock") {
       // Check if user has administrator permissions
       if (
@@ -82,11 +85,14 @@ module.exports = {
         });
         return;
       }
-      await handleUnlockTicket(interaction);
+      await ticketButtons.handleUnlockTicket(interaction);
     }
   },
 };
 
+/**
+ * Handle the create ticket command
+ */
 async function handleCreateTicket(interaction: CommandInteraction) {
   if (!interaction.isChatInputCommand()) return;
 
@@ -104,13 +110,10 @@ async function handleCreateTicket(interaction: CommandInteraction) {
   }
 
   // Check if user already has an open ticket
-  const existingTicket = await prisma.ticket.findFirst({
-    where: {
-      userId: user.id,
-      guildId: guild.id,
-      status: "OPEN",
-    },
-  });
+  const existingTicket = await ticketService.findOpenTicketByUser(
+    user.id,
+    guild.id
+  );
 
   if (existingTicket) {
     await interaction.reply({
@@ -120,116 +123,19 @@ async function handleCreateTicket(interaction: CommandInteraction) {
     return;
   }
 
-  // Get or create ticket configuration
-  let config = await prisma.ticketConfig.findUnique({
-    where: { id: "config" },
-  });
-
-  if (!config) {
-    config = await prisma.ticketConfig.create({
-      data: {
-        id: "config",
-        guildId: guild.id,
-      },
-    });
-  }
-
-  // Create ticket channel
-  const ticketChannel = await guild.channels.create({
-    name: `ticket-${user.username}`,
-    type: ChannelType.GuildText,
-    parent: config.categoryId || undefined,
-    permissionOverwrites: [
-      {
-        id: guild.id,
-        deny: [PermissionsBitField.Flags.ViewChannel],
-      },
-      {
-        id: user.id,
-        allow: [
-          PermissionsBitField.Flags.ViewChannel,
-          PermissionsBitField.Flags.SendMessages,
-          PermissionsBitField.Flags.ReadMessageHistory,
-        ],
-      },
-      // Add support role permissions if configured
-      ...(config.supportRoleId
-        ? [
-            {
-              id: config.supportRoleId,
-              allow: [
-                PermissionsBitField.Flags.ViewChannel,
-                PermissionsBitField.Flags.SendMessages,
-                PermissionsBitField.Flags.ReadMessageHistory,
-              ],
-            },
-          ]
-        : []),
-    ],
-  });
-
-  // Create ticket in database
-  const ticket = await prisma.ticket.create({
-    data: {
-      channelId: ticketChannel.id,
-      userId: user.id,
-      guildId: guild.id,
-      ticketType: ticketType,
+  // Create a fake modal submission to reuse the ticket creation logic
+  const fakeModalSubmission = {
+    fields: {
+      getTextInputValue: () => reason,
     },
-  });
+    user,
+    guild,
+    reply: interaction.reply.bind(interaction),
+    customId: `ticket_modal_${ticketType}`,
+  };
 
-  // Create welcome embed
-  const welcomeEmbed = new EmbedBuilder()
-    .setColor(0x0099ff)
-    .setTitle(`${ticketType} Ticket`)
-    .setDescription(config.welcomeMessage)
-    .addFields(
-      { name: "Created by", value: `<@${user.id}>` },
-      { name: "Reason", value: reason }
-    )
-    .setTimestamp();
-
-  // Create buttons for ticket actions
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId("close_ticket")
-      .setLabel("Close Ticket")
-      .setStyle(ButtonStyle.Danger)
-  );
-
-  await (ticketChannel as TextChannel).send({
-    content: `<@${user.id}> ${
-      config.supportRoleId ? `<@&${config.supportRoleId}>` : ""
-    }`,
-    embeds: [welcomeEmbed],
-    components: [row],
-  });
-
-  // Log ticket creation if log channel is configured
-  if (config.logChannelId) {
-    const logChannel = (await guild.channels.fetch(
-      config.logChannelId
-    )) as TextChannel;
-    if (logChannel) {
-      const logEmbed = new EmbedBuilder()
-        .setColor(0x00ff00)
-        .setTitle("Ticket Created")
-        .addFields(
-          { name: "Ticket", value: `<#${ticketChannel.id}>` },
-          { name: "Created by", value: `<@${user.id}>` },
-          { name: "Type", value: ticketType },
-          { name: "Reason", value: reason }
-        )
-        .setTimestamp();
-
-      await logChannel.send({ embeds: [logEmbed] });
-    }
-  }
-
-  await interaction.reply({
-    content: `Ticket created! <#${ticketChannel.id}>`,
-    ephemeral: true,
-  });
+  // Use the modal handler to create the ticket
+  await ticketModals.handleTicketCreate(fakeModalSubmission as any, ticketType);
 }
 
 async function handleCloseTicket(interaction: CommandInteraction) {

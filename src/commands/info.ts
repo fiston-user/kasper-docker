@@ -3,8 +3,7 @@ import {
   CommandInteraction,
   EmbedBuilder,
 } from "discord.js";
-import { prisma } from "../index";
-import { formatDate } from '../utils/ticketUtils';
+import * as ticketService from "../services/ticketService";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -21,11 +20,9 @@ module.exports = {
     }
 
     // Check if the channel is a ticket
-    const ticket = await prisma.ticket.findFirst({
-      where: {
-        channelId: interaction.channel.id,
-      },
-    });
+    const ticket = await ticketService.findTicketByChannel(
+      interaction.channel.id
+    );
 
     if (!ticket) {
       await interaction.reply({
@@ -43,17 +40,17 @@ module.exports = {
     // Set color based on ticket status
     let statusColor;
     switch (ticket.status) {
-      case 'OPEN':
-        statusColor = 0x0099FF; // Blue
+      case "OPEN":
+        statusColor = 0x0099ff; // Blue
         break;
-      case 'LOCKED':
-        statusColor = 0xFFA500; // Orange
+      case "LOCKED":
+        statusColor = 0xffa500; // Orange
         break;
-      case 'CLOSED':
-        statusColor = 0xFF0000; // Red
+      case "CLOSED":
+        statusColor = 0xff0000; // Red
         break;
       default:
-        statusColor = 0x0099FF; // Default blue
+        statusColor = 0x0099ff; // Default blue
     }
 
     // Create info embed
@@ -72,21 +69,24 @@ module.exports = {
         { name: "Type", value: ticket.ticketType },
         {
           name: "Created at",
-          value: formatDate(ticket.createdAt),
+          value: ticketService.formatDate(ticket.createdAt),
         }
       )
       .setTimestamp();
 
     // Add locked at field if ticket is or was locked
     if (ticket.lockedAt) {
-      infoEmbed.addFields({ name: 'Locked at', value: formatDate(ticket.lockedAt) });
+      infoEmbed.addFields({
+        name: "Locked at",
+        value: ticketService.formatDate(ticket.lockedAt),
+      });
     }
 
     // Add closed at field if ticket is closed
     if (ticket.status === "CLOSED" && ticket.closedAt) {
       infoEmbed.addFields({
         name: "Closed at",
-        value: formatDate(ticket.closedAt),
+        value: ticketService.formatDate(ticket.closedAt),
       });
     }
 
