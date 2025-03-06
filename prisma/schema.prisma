@@ -1,0 +1,46 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Ticket {
+  id         String    @id @default(uuid())
+  channelId  String    @unique
+  userId     String
+  guildId    String
+  status     String    @default("OPEN") // OPEN, CLOSED, LOCKED
+  createdAt  DateTime  @default(now())
+  closedAt   DateTime?
+  lockedAt   DateTime?
+  ticketType String    @default("SUPPORT")
+  messages   Message[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  userId    String
+  ticketId  String
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model TicketConfig {
+  id             String  @id @default("config")
+  guildId        String
+  categoryId     String?
+  logChannelId   String?
+  supportRoleId  String?
+  welcomeMessage String  @default("Welcome to your ticket! Support will be with you shortly.")
+  ticketTypes    String  @default("SUPPORT,BILLING,TECHNICAL") // Comma-separated list of ticket types
+}
