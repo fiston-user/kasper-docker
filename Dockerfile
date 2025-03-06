@@ -11,7 +11,7 @@ RUN npm install wait-on --save-dev
 COPY . .
 
 # Make entrypoint script executable
-RUN chmod +x docker-entrypoint.sh
+RUN chmod +x scripts/docker-entrypoint.sh
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -26,7 +26,7 @@ RUN mkdir -p transcripts
 ENV NODE_ENV=production
 
 # Set entrypoint
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 
 # Run the bot
 CMD ["npm", "start"] 
