@@ -10,4 +10,4 @@ fi
 
 # Show bot logs
 echo "Showing bot logs (press Ctrl+C to exit)..."
-docker-compose logs -f bot 
+docker compose logs -f bot 

@@ -8,8 +8,8 @@ fi
 
 # Build and start the containers
 echo "Building and starting Docker containers..."
-docker-compose up -d --build
+docker compose up -d --build
 
 # Show logs
 echo "Showing logs (press Ctrl+C to exit)..."
-docker-compose logs -f 
+docker compose logs -f 

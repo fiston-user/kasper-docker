@@ -13,6 +13,49 @@ A powerful Discord ticket system bot built with TypeScript and Discord.js.
 - Role-based permissions
 - Automatic ticket archiving
 
+## Deployment
+
+### First-time Deployment
+
+1. Edit the `scripts/deploy.sh` file and set your Git repository URL:
+
+   ```bash
+   REPO_URL="your-git-repo-url"
+   ```
+
+2. Run the deployment script on your server:
+
+   ```bash
+   curl -s https://raw.githubusercontent.com/yourusername/kasper/main/scripts/deploy.sh | bash
+   ```
+
+3. Edit the `.env` file with your Discord bot credentials:
+
+   ```bash
+   nano /opt/kasper/.env
+   ```
+
+4. Run the deployment script again to start the bot:
+   ```bash
+   /opt/kasper/scripts/deploy.sh
+   ```
+
+### Updating the Bot
+
+When you make changes to the bot and push them to your Git repository, you can update your deployment:
+
+```bash
+cd /opt/kasper
+./scripts/update.sh
+```
+
+This will:
+
+1. Stop the running containers
+2. Pull the latest changes from Git
+3. Rebuild the containers
+4. Start the containers again
+
 ## Setup
 
 ### Standard Setup
@@ -92,9 +135,42 @@ A powerful Discord ticket system bot built with TypeScript and Discord.js.
 
 ## Development
 
-- `npm run dev` - Start the bot in development mode
-- `npm run build` - Build the project
-- `npm start` - Start the bot in production mode
+### Prerequisites
+
+- Node.js 18 or higher
+- Docker and Docker Compose
+
+### Local Setup
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/yourusername/kasper.git
+   cd kasper
+   ```
+
+2. Create a `.env` file:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Edit the `.env` file with your Discord bot credentials.
+
+4. Start the bot:
+   ```bash
+   ./scripts/run.sh
+   ```
+
+### Useful Scripts
+
+- `scripts/run.sh` - Start the bot in development mode
+- `scripts/stop.sh` - Stop the bot
+- `scripts/bot-logs.sh` - View bot logs
+- `scripts/db-logs.sh` - View database logs
+- `scripts/db-reset.sh` - Reset the database
+- `scripts/update.sh` - Update the bot to the latest version
+- `scripts/deploy.sh` - Deploy the bot on a new server
 
 ## Docker Commands
 
@@ -121,4 +197,4 @@ This project uses PostgreSQL with Prisma ORM for data storage when running in Do
 
 ## License
 
-MIT
+[MIT](LICENSE)
